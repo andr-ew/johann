@@ -137,28 +137,23 @@ Engine_Johann : CroneEngine {
 
             var path = folder +/+ files[midival][dynamic][variation][release];
 
-            var buf = Buffer.cueSoundFile(context.server, path, 0, 2);
+            var buf, x;
 
-            //create a new synth hooked up to the proper buf
-            var x = Synth.new(
-                \diskPlayer, [\bufnum, buf]
-            ).onFree({
-                ("freeing: " ++ [
-                    midival, dynamic, variation, release
-                ].join(".") ++ ".wav").postln;
+            context.server.makeBundle(nil, {
+                buf = Buffer.cueSoundFile(context.server, path, 0, 2);
+                context.server.sync;
 
-                buf.close();
-                buf.free();
+                x = Synth(\diskPlayer, [\bufnum, buf]).onFree({
+
+                    ("freeing: " ++ [
+                        midival, dynamic, variation, release
+                    ].join(".") ++ ".wav").postln;
+
+                    buf.close();
+                    buf.free();
+                });
+                NodeWatcher.register(x);
             });
-
-            //hmm, so for consecutive notes, we need to just keep adding buffers ???
-            //nay ! we just move to a different vel level. this keeps things sounding more natural.
-            //in order to accomodate playing many notes in order, we probably just need a bunch of buffers loaded for each note
-
-            //voices.add(x);
-            //removeIndex = voices.size - 1;
-
-            NodeWatcher.register(x);
         });
 	}
 

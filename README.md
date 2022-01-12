@@ -1,6 +1,6 @@
 # johann
 
-multisample player using `VDiskIn`.
+multisample player using `VDiskIn`. (very WIP)
 
 ## testing
 

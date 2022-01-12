@@ -119,11 +119,13 @@ Engine_Johann : CroneEngine {
         context.server.sync;
 
         voices = List.newClear();
+        cueBufs = List.newClear();
+
 
         //engine.loadfolder(<absolute path to folder containing sample files>)
         this.addCommand("loadfolder", "s", { arg msg;
             this.fillFiles(msg[1].asString);
-            this.cueAllBufs();
+            //this.cueAllBufs();
         });
 
         //engine.noteOn(<midi_note>, <vel>, <variation>, <release>)
@@ -132,9 +134,10 @@ Engine_Johann : CroneEngine {
             var dynamic = msg[2];
             var variation = msg[3] ? 1;
             var release = msg[4] ? 0;
-            var removeIndex;
 
-            var buf = cueBufs[midival][dynamic][variation][release];
+            var path = folder +/+ files[midival][dynamic][variation][release];
+
+            var buf = Buffer.cueSoundFile(context.server, path, 0, 2);
 
             //create a new synth hooked up to the proper buf
             var x = Synth.new(
@@ -144,13 +147,8 @@ Engine_Johann : CroneEngine {
                     midival, dynamic, variation, release
                 ].join(".") ++ ".wav").postln;
 
-                //remove voice from list
-                //voices.removeAt(removeIndex);
-
-                //once the synth is freed, re-cue sound file in the buffer
-                buf.close(
-                    buf.cueSoundFileMsg(folder +/+ files[midival][dynamic][variation][release], 0)
-                );
+                buf.close();
+                buf.free();
             });
 
             //hmm, so for consecutive notes, we need to just keep adding buffers ???
@@ -159,6 +157,7 @@ Engine_Johann : CroneEngine {
 
             //voices.add(x);
             //removeIndex = voices.size - 1;
+
             NodeWatcher.register(x);
         });
 	}

@@ -140,7 +140,7 @@ Engine_Johann : CroneEngine {
                 ].join(".") ++ ".wav").postln;
 
                 //remove voice from list
-                voices.removeAt(removeIndex);
+                //voices.removeAt(removeIndex);
 
                 //re-cue sound file
                 buf.close(
@@ -152,8 +152,8 @@ Engine_Johann : CroneEngine {
             //nay ! we just move to a different vel level. this keeps things sounding more natural.
             //in order to accomodate playing many notes in order, we probably just need a bunch of buffers loaded for each note
 
-            voices.add(x);
-            removeIndex = voices.size - 1;
+            //voices.add(x);
+            //removeIndex = voices.size - 1;
             NodeWatcher.register(x);
         });
 

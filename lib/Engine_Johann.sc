@@ -42,6 +42,7 @@ Engine_Johann : CroneEngine {
         });
     }
 
+    //initiate cueBufs with all buffers cued with files
     cueAllBufs {
         cueBufs = Dictionary.new();
 
@@ -79,6 +80,7 @@ Engine_Johann : CroneEngine {
         });
     }
 
+    //free all cue buffers
     freeAllCueBufs {
         cueBufs.keysValuesDo({ arg midival, dynamics;
             // [midival: midival].postln;
@@ -106,10 +108,6 @@ Engine_Johann : CroneEngine {
     }
 
 	alloc {
-        this.fillFiles(Platform.userHomeDir +/+ "dust/audio/dx.samples/johann");
-        this.cueAllBufs();
-
-        context.server.sync;
 
         SynthDef(\diskPlayer,{
             var diskin = VDiskIn.ar(2, \bufnum.kr());
@@ -122,6 +120,12 @@ Engine_Johann : CroneEngine {
 
         voices = List.newClear();
 
+        //engine.loadfolder(<absolute path to folder containing sample files>)
+        this.addCommand("loadfolder", "s", { arg msg;
+            this.fillFiles(msg[1].asString);
+            this.cueAllBufs();
+        });
+
         //engine.noteOn(<midi_note>, <vel>, <variation>, <release>)
         this.addCommand("noteOn", "iiii", { arg msg;
             var midival = msg[1];
@@ -132,6 +136,7 @@ Engine_Johann : CroneEngine {
 
             var buf = cueBufs[midival][dynamic][variation][release];
 
+            //create a new synth hooked up to the proper buf
             var x = Synth.new(
                 \diskPlayer, [\bufnum, buf]
             ).onFree({
@@ -142,7 +147,7 @@ Engine_Johann : CroneEngine {
                 //remove voice from list
                 //voices.removeAt(removeIndex);
 
-                //re-cue sound file
+                //once the synth is freed, re-cue sound file in the buffer
                 buf.close(
                     buf.cueSoundFileMsg(folder +/+ files[midival][dynamic][variation][release], 0)
                 );
@@ -156,9 +161,6 @@ Engine_Johann : CroneEngine {
             //removeIndex = voices.size - 1;
             NodeWatcher.register(x);
         });
-
-        files[11][1][1][0].postln;
-        cueBufs[11][1][1][0].postln;
 	}
 
 	free {

@@ -6,8 +6,10 @@ Engine_Johann : CroneEngine {
     var folder;
 
     var files;
-    var cueBufs;
-    var voices;
+    var diskVoices;
+    var voiceGroup;
+
+    var maxVoices = 32;
 
 	*new { arg context, doneCallback;
 		^super.new(context, doneCallback);
@@ -44,25 +46,38 @@ Engine_Johann : CroneEngine {
 
 	alloc {
 
+        //synthdef for our regular multisample player (non-looping)
         SynthDef(\diskPlayer,{
-            var diskin = VDiskIn.ar(2, \bufnum.kr());
+            //sustain-relase envelope
+            var env = EnvGen.kr(
+                Env.asr( 0, 1, \release.kr(10)),
+                \gate.kr(),
+                doneAction: Done.freeSelf
+            );
+            var killGate = \killGate.kr() + Impulse.kr(0);
+			var killEnv = EnvGen.kr(
+                Env.asr( 0, 1, 0.01),
+                \killGate.kr(),
+                doneAction: Done.freeSelf
+            );
+
+            //disk reading Ugen using the cue buffer
+            var diskin = VDiskIn.ar(2, \bufnum.kr(), \rate.kr(1));
             FreeSelfWhenDone.kr(diskin);
 
-            Out.ar(0, diskin);
+            Out.ar(0, diskin * env * killEnv);
         }).add;
 
         context.server.sync;
-
-        voices = List.newClear();
-        cueBufs = List.newClear();
-
 
         //TODO: stereo / mono option.
         //engine.loadfolder(<absolute path to folder containing sample files>)
         this.addCommand("loadfolder", "s", { arg msg;
             this.fillFiles(msg[1].asString);
-            //this.cueAllBufs();
         });
+
+        diskVoices = List.newClear();
+        voiceGroup = Group.new(context.xg);
 
         //engine.noteOn(<midi_note>, <vel>, <variation>, <release>)
         this.addCommand("noteOn", "iiii", { arg msg;
@@ -73,27 +88,68 @@ Engine_Johann : CroneEngine {
 
             var path = folder +/+ files[midival][dynamic][variation][release];
 
-            var buf, x;
+            //kill oldest voices while max voice count is exceeded
+            if(diskVoices.size >= maxVoices, {
+                var voice = diskVoices.last;
+
+                if(voice.notNil && voice.theSynth.isPlaying, {
+                    voice.theSynth.set(\gate, 0);
+                    voice.theSynth.set(\killGate, 0);
+                });
+            });
 
             context.server.makeBundle(nil, {
+                var buf, newVoice;
+
+                //cue a new buffer for disk reading
                 buf = Buffer.cueSoundFile(context.server, path, 0, 2);
+
                 context.server.sync;
 
-                x = Synth(\diskPlayer, [\bufnum, buf]).onFree({
+                //create a new synth
+                newVoice = (
+                    id: midival,
+                    theSynth: Synth(
+                        \diskPlayer,
+                        [\bufnum, buf, \gate, 1, \killGate, 1],
+                        target: voiceGroup
+                    ).onFree({
+                        ("freeing: " ++ [
+                            midival, dynamic, variation, release
+                        ].join(".") ++ ".wav").postln;
 
-                    ("freeing: " ++ [
-                        midival, dynamic, variation, release
-                    ].join(".") ++ ".wav").postln;
+                        //free buffer & remove voice from voices list on free
+                        buf.close();
+                        buf.free();
+                        diskVoices.remove(newVoice);
+                    })
+                );
 
-                    buf.close();
-                    buf.free();
-                });
-                NodeWatcher.register(x);
+                NodeWatcher.register(newVoice.theSynth);
+                diskVoices.addFirst(newVoice);
             });
         });
+
+        this.addCommand("noteOff", "i", { arg msg;
+            var midival = msg[1];
+            var voice = diskVoices.detect{arg v; v.id == midival};
+
+            if(voice.notNil && voice.theSynth.isPlaying, {
+				voice.theSynth.set(\gate, 0);
+			});
+        });
+
+		this.addCommand(\noteOffAll, "", { arg msg;
+			voiceGroup.set(\gate, 0);
+		});
+
+        this.addCommand(\noteKillAll, "", { arg msg;
+			voiceGroup.set(\gate, 0);
+			voiceGroup.set(\killGate, 0);
+		});
 	}
 
 	free {
-        this.freeAllCueBufs();
+		voiceGroup.free;
 	}
 }

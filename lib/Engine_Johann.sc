@@ -110,7 +110,7 @@ Engine_Johann : CroneEngine {
 
                 context.server.sync;
 
-                //create a new synth
+                //create a new disk player synth to read from the cue buffer
                 newVoice = (
                     id: midival,
                     theSynth: Synth(

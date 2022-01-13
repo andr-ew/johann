@@ -15,35 +15,6 @@ Engine_Johann : CroneEngine {
 		^super.new(context, doneCallback);
 	}
 
-    //fill the `files` array with filenames for each midival, dynamic, variation, release
-    fillFiles { arg folderPath;
-        folder = folderPath;
-
-        files = Dictionary.new();
-        PathName(folderPath).files.do({ arg file;
-            var midival, dynamic, numberOfDynamics, variation, release;
-
-            # midival, dynamic, numberOfDynamics, variation, release = (
-                file.fileNameWithoutExtension.split($.)
-            ).collect({ arg string;
-                string.asInteger;
-            });
-
-            dynamics = numberOfDynamics;
-
-            ((((files[midival] ?? {
-                files.put(midival, Dictionary.new());
-                files[midival];
-            })[dynamic]) ?? {
-                files[midival].put(dynamic, Dictionary.new());
-                files[midival][dynamic];
-            })[variation] ?? {
-                files[midival][dynamic].put(variation, Dictionary.new());
-                files[midival][dynamic][variation];
-            }).put(release, file.fileName);
-        });
-    }
-
 	alloc {
         diskVoices = List.newClear();
         voiceGroup = Group.new(context.xg);
@@ -80,10 +51,36 @@ Engine_Johann : CroneEngine {
 
         context.server.sync;
 
+        //fill the `files` array with filenames for each midival, dynamic, variation, release
         //TODO: stereo / mono option.
         //engine.loadfolder(<absolute path to folder containing sample files>)
         this.addCommand("loadfolder", "s", { arg msg;
-            this.fillFiles(msg[1].asString);
+            var folderPath = msg[1].asString;
+            folder = folderPath;
+
+            files = Dictionary.new();
+            PathName(folderPath).files.do({ arg file;
+                var midival, dynamic, numberOfDynamics, variation, release;
+
+                # midival, dynamic, numberOfDynamics, variation, release = (
+                    file.fileNameWithoutExtension.split($.)
+                ).collect({ arg string;
+                    string.asInteger;
+                });
+
+                dynamics = numberOfDynamics;
+
+                ((((files[midival] ?? {
+                    files.put(midival, Dictionary.new());
+                    files[midival];
+                })[dynamic]) ?? {
+                    files[midival].put(dynamic, Dictionary.new());
+                    files[midival][dynamic];
+                })[variation] ?? {
+                    files[midival][dynamic].put(variation, Dictionary.new());
+                    files[midival][dynamic][variation];
+                }).put(release, file.fileName);
+            });
         });
 
         //engine.noteOn(<midi_note>, <vel>, <variation>, <release>)

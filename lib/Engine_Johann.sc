@@ -1,13 +1,10 @@
 Engine_Johann : CroneEngine {
 
-    var dynamics;
-    var folder;
-
-    var files;
-    var diskVoices;
+    var voices;
     var voiceGroup;
     var params;
     var diskPlayerDef;
+    var loopBufs;
 
     var maxVoices = 32;
 
@@ -16,7 +13,7 @@ Engine_Johann : CroneEngine {
 	}
 
 	alloc {
-        diskVoices = List.newClear();
+        voices = List.newClear();
         voiceGroup = Group.new(context.xg);
 
         params = (
@@ -24,7 +21,7 @@ Engine_Johann : CroneEngine {
             \rate: 1
         );
 
-        //synthdef for our regular multisample player (non-looping)
+        //synthdef for multisample player
         diskPlayerDef = SynthDef(\diskPlayer,{
 
             //sustain-relase envelope
@@ -51,50 +48,15 @@ Engine_Johann : CroneEngine {
 
         context.server.sync;
 
-        //fill the `files` array with filenames for each midival, dynamic, variation, release
         //TODO: stereo / mono option.
-        //engine.loadfolder(<absolute path to folder containing sample files>)
-        this.addCommand("loadfolder", "s", { arg msg;
-            var folderPath = msg[1].asString;
-            folder = folderPath;
-
-            files = Dictionary.new();
-            PathName(folderPath).files.do({ arg file;
-                var midival, dynamic, numberOfDynamics, variation, release;
-
-                # midival, dynamic, numberOfDynamics, variation, release = (
-                    file.fileNameWithoutExtension.split($.)
-                ).collect({ arg string;
-                    string.asInteger;
-                });
-
-                dynamics = numberOfDynamics;
-
-                ((((files[midival] ?? {
-                    files.put(midival, Dictionary.new());
-                    files[midival];
-                })[dynamic]) ?? {
-                    files[midival].put(dynamic, Dictionary.new());
-                    files[midival][dynamic];
-                })[variation] ?? {
-                    files[midival][dynamic].put(variation, Dictionary.new());
-                    files[midival][dynamic][variation];
-                }).put(release, file.fileName);
-            });
-        });
-
-        //engine.noteOn(<midi_note>, <vel>, <variation>, <release>)
-        this.addCommand("noteOn", "iiii", { arg msg;
-            var midival = msg[1];
-            var dynamic = msg[2];
-            var variation = msg[3] ? 1;
-            var release = msg[4] ? 0;
-
-            var path = folder +/+ files[midival][dynamic][variation][release];
+        //engine.noteOn(<id>, <sample path>)
+        this.addCommand("noteOn", "is", { arg msg;
+            var id = msg[1];
+            var path = msg[2];
 
             //kill oldest voices while max voice count is exceeded
-            if(diskVoices.size >= maxVoices, {
-                var voice = diskVoices.last;
+            if(voices.size >= maxVoices, {
+                var voice = voices.last;
 
                 if(voice.notNil && voice.theSynth.isPlaying, {
                     voice.theSynth.set(\gate, 0);
@@ -112,31 +74,29 @@ Engine_Johann : CroneEngine {
 
                 //create a new disk player synth to read from the cue buffer
                 newVoice = (
-                    id: midival,
+                    id: id,
                     theSynth: Synth(
                         \diskPlayer,
                         [\bufnum, buf, \gate, 1, \killGate, 1] ++ params.getPairs,
                         target: voiceGroup
                     ).onFree({
-                        ("freeing: " ++ [
-                            midival, dynamic, variation, release
-                        ].join(".") ++ ".wav").postln;
+                        ("freeing: " ++ path).postln;
 
                         //free buffer & remove voice from voices list on free
                         buf.close();
                         buf.free();
-                        diskVoices.remove(newVoice);
+                        voices.remove(newVoice);
                     })
                 );
 
                 NodeWatcher.register(newVoice.theSynth);
-                diskVoices.addFirst(newVoice);
+                voices.addFirst(newVoice);
             });
         });
 
         this.addCommand("noteOff", "i", { arg msg;
-            var midival = msg[1];
-            var voice = diskVoices.detect{arg v; v.id == midival};
+            var id = msg[1];
+            var voice = voices.detect{arg v; v.id == id};
 
             if(voice.notNil && voice.theSynth.isPlaying, {
 				voice.theSynth.set(\gate, 0);

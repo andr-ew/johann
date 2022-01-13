@@ -42,71 +42,6 @@ Engine_Johann : CroneEngine {
         });
     }
 
-    //initiate cueBufs with all buffers cued with files
-    cueAllBufs {
-        cueBufs = Dictionary.new();
-
-        files.keysValuesDo({ arg midival, dynamics;
-
-            cueBufs[midival] ?? {
-                cueBufs.put(midival, Dictionary.new());
-            };
-
-            dynamics.keysValuesDo({ arg dynamic, variations;
-
-                cueBufs[midival][dynamic] ?? {
-                    cueBufs[midival].put(dynamic, Dictionary.new());
-                };
-
-                variations.keysValuesDo({ arg variation, releases;
-
-                    cueBufs[midival][dynamic][variation] ?? {
-                        cueBufs[midival][dynamic].put(variation, Dictionary.new());
-                    };
-
-                    releases.keysValuesDo({ arg release, fileName;
-                        var filePath = (folder +/+ fileName);
-                        ("cuing: " ++ filePath).postln;
-
-                        cueBufs[midival][dynamic][variation].put(release, Buffer.cueSoundFile(
-                            context.server,
-                            filePath,
-                            0,
-                            2
-                        ));
-                    })
-                });
-            });
-        });
-    }
-
-    //free all cue buffers
-    freeAllCueBufs {
-        cueBufs.keysValuesDo({ arg midival, dynamics;
-            // [midival: midival].postln;
-
-            dynamics.keysValuesDo({ arg dynamic, variations;
-                // [dynamic: dynamic].postln;
-
-                variations.keysValuesDo({ arg variation, releases;
-                    // [variation: variation].postln;
-
-                    releases.keysValuesDo({ arg release, cueBuf;
-                        // [release: release].postln;
-
-                        ("freeing cue buffer: " ++ [
-                            midival, dynamic, variation, release
-                        ].join(".") ++ ".wav").postln;
-
-                        cueBuf.free;
-                    });
-                });
-            });
-        });
-
-        context.server.sync;
-    }
-
 	alloc {
 
         SynthDef(\diskPlayer,{
@@ -122,6 +57,7 @@ Engine_Johann : CroneEngine {
         cueBufs = List.newClear();
 
 
+        //TODO: stereo / mono option.
         //engine.loadfolder(<absolute path to folder containing sample files>)
         this.addCommand("loadfolder", "s", { arg msg;
             this.fillFiles(msg[1].asString);

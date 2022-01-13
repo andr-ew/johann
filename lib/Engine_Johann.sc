@@ -1,7 +1,5 @@
 Engine_Johann : CroneEngine {
 
-    //dict[midival][dynamic][variation][release]
-
     var dynamics;
     var folder;
 
@@ -57,12 +55,15 @@ Engine_Johann : CroneEngine {
 
         //synthdef for our regular multisample player (non-looping)
         diskPlayerDef = SynthDef(\diskPlayer,{
+
             //sustain-relase envelope
             var env = EnvGen.kr(
                 Env.asr( 0, 1, \release.kr()),
                 \gate.kr(),
                 doneAction: Done.freeSelf
             );
+
+            //envelope for killing the voice
             var killGate = \killGate.kr() + Impulse.kr(0);
 			var killEnv = EnvGen.kr(
                 Env.asr( 0, 1, 0.01),
@@ -84,8 +85,6 @@ Engine_Johann : CroneEngine {
         this.addCommand("loadfolder", "s", { arg msg;
             this.fillFiles(msg[1].asString);
         });
-
-
 
         //engine.noteOn(<midi_note>, <vel>, <variation>, <release>)
         this.addCommand("noteOn", "iiii", { arg msg;

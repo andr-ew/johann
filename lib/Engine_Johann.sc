@@ -8,6 +8,8 @@ Engine_Johann : CroneEngine {
     var files;
     var diskVoices;
     var voiceGroup;
+    var params;
+    var diskPlayerDef;
 
     var maxVoices = 32;
 
@@ -45,12 +47,19 @@ Engine_Johann : CroneEngine {
     }
 
 	alloc {
+        diskVoices = List.newClear();
+        voiceGroup = Group.new(context.xg);
+
+        params = (
+            \release: 10,
+            \rate: 1
+        );
 
         //synthdef for our regular multisample player (non-looping)
-        SynthDef(\diskPlayer,{
+        diskPlayerDef = SynthDef(\diskPlayer,{
             //sustain-relase envelope
             var env = EnvGen.kr(
-                Env.asr( 0, 1, \release.kr(10)),
+                Env.asr( 0, 1, \release.kr()),
                 \gate.kr(),
                 doneAction: Done.freeSelf
             );
@@ -62,7 +71,7 @@ Engine_Johann : CroneEngine {
             );
 
             //disk reading Ugen using the cue buffer
-            var diskin = VDiskIn.ar(2, \bufnum.kr(), \rate.kr(1));
+            var diskin = VDiskIn.ar(2, \bufnum.kr(), \rate.kr());
             FreeSelfWhenDone.kr(diskin);
 
             Out.ar(0, diskin * env * killEnv);
@@ -76,8 +85,7 @@ Engine_Johann : CroneEngine {
             this.fillFiles(msg[1].asString);
         });
 
-        diskVoices = List.newClear();
-        voiceGroup = Group.new(context.xg);
+
 
         //engine.noteOn(<midi_note>, <vel>, <variation>, <release>)
         this.addCommand("noteOn", "iiii", { arg msg;
@@ -111,7 +119,7 @@ Engine_Johann : CroneEngine {
                     id: midival,
                     theSynth: Synth(
                         \diskPlayer,
-                        [\bufnum, buf, \gate, 1, \killGate, 1],
+                        [\bufnum, buf, \gate, 1, \killGate, 1] ++ params.getPairs,
                         target: voiceGroup
                     ).onFree({
                         ("freeing: " ++ [
@@ -147,6 +155,14 @@ Engine_Johann : CroneEngine {
 			voiceGroup.set(\gate, 0);
 			voiceGroup.set(\killGate, 0);
 		});
+
+        //add all other commands via the `params` dict
+        params.keysValuesDo({ arg k;
+            this.addCommand(k, "f", { arg msg;
+                params[k] = msg[1];
+                voiceGroup.set(k, msg[1]);
+            });
+        });
 	}
 
 	free {

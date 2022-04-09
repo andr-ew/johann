@@ -81,7 +81,7 @@ local function App()
                 local deg = (k.x-1)%#iv+1
 
                 --local hz = root * 2^oct * 2^(deg/12)
-                local note = root + (oct*12) + iv[deg]
+                local note = root + (oct*12) + iv[deg] - 1
 
                 if add then 
                     local dyn = forte > 0 and 5 or (

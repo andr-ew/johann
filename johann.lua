@@ -52,7 +52,6 @@ for i = 1,5 do
 end
 
 local function App()
-
     local painissimo_mezzo = 1
     local _painissimo_mezzo = to.pattern(mpat, 'painissimo_mezzo', Grid.number, function()
         return {
@@ -73,11 +72,17 @@ local function App()
 
     local _keys = to.pattern(mpat, 'keys', Grid.momentary, function() 
         return {
-            x = { 1, 8 }, y = { 2, 8 },
+            x = { 1, 16 }, y = { 2, 8 },
+            lvl = function(_, x, y)
+                local iv = scale
+                local deg = (x-1)%#iv+1
+
+                return deg == 1 and { 4, 15 } or { 0, 15 }
+            end,
             action = function(v, t, d, add, rem)
                 local k = add or rem
                 local iv = scale
-                local oct = k.y-4 + k.x//(#iv+1)
+                local oct = k.y-5 + (k.x-1)//#iv + 1
                 local deg = (k.x-1)%#iv+1
 
                 --local hz = root * 2^oct * 2^(deg/12)

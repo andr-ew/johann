@@ -17,6 +17,13 @@ params:add{
     controlspec = cs.def{ min = 0, max = 15, default = 1 },
     action = function(v) engine.level(v) end,
 }
+params:add{
+    id = 'rate', type = 'control',
+    controlspec = cs.def{ 
+        min = -2, max = 2, default = 0, quantum = 1/100/4,
+    },
+    action = function(v) engine.rate(2^v) end,
+}
 
 m = midi.connect()
 m.event = function(data)
@@ -24,7 +31,7 @@ m.event = function(data)
     if msg.type == "note_on" then
         
         -- args: midival, dynamic, variation, release
-        engine.noteOn(msg.note, math.ceil((msg.vel/127)*4), 1, 0)
+        engine.noteOn(msg.note-12, math.ceil((msg.vel/127)*7), 1, 0)
     elseif msg.type == "note_off" then
     end
 end

@@ -21,7 +21,8 @@ Engine_Johann : CroneEngine {
 
         params = (
             \release: 10,
-            \rate: 1
+            \rate: 1,
+            \level: 1,
         );
 
         //synthdef for our regular multisample player (non-looping)
@@ -46,7 +47,7 @@ Engine_Johann : CroneEngine {
             var diskin = VDiskIn.ar(2, \bufnum.kr(), \rate.kr());
             FreeSelfWhenDone.kr(diskin);
 
-            Out.ar(0, diskin * env * killEnv);
+            Out.ar(0, diskin * env * \level.kr() * killEnv);
         }).add;
 
         context.server.sync;

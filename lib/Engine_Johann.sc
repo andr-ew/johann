@@ -47,7 +47,7 @@ Engine_Johann : CroneEngine {
             var diskin = VDiskIn.ar(2, \bufnum.kr(), \rate.kr());
             FreeSelfWhenDone.kr(diskin);
 
-            Out.ar(0, diskin * env * \level.kr() * killEnv);
+            Out.ar(0, diskin * env * \level.kr() * \velLevel.kr() * killEnv);
         }).add;
 
         context.server.sync;
@@ -85,11 +85,12 @@ Engine_Johann : CroneEngine {
         });
 
         //engine.noteOn(<midi_note>, <vel>, <variation>, <release>)
-        this.addCommand("noteOn", "iiii", { arg msg;
+        this.addCommand("noteOn", "iiiif", { arg msg;
             var midival = msg[1];
             var dynamic = msg[2];
             var variation = msg[3] ? 1;
             var release = msg[4] ? 0;
+            var velLevel = msg[5] ? 1;
 
             var path = folder +/+ files[midival][dynamic][variation][release];
 
@@ -116,7 +117,7 @@ Engine_Johann : CroneEngine {
                     id: midival,
                     theSynth: Synth(
                         \diskPlayer,
-                        [\bufnum, buf, \gate, 1, \killGate, 1] ++ params.getPairs,
+                        [\bufnum, buf, \gate, 1, \killGate, 1, \velLevel, velLevel] ++ params.getPairs,
                         target: voiceGroup
                     ).onFree({
                         ("freeing: " ++ [

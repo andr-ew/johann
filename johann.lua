@@ -35,9 +35,16 @@ m.event = function(data)
     if not get_passthrough() then
         local msg = midi.to_msg(data)
         if msg.type == "note_on" then
+            local vel = msg.vel
+            -- local dyn = math.ceil((msg.vel/127)*7)
+            -- local dyn = util.round(util.linlin(1 + 25, 127 - 25, 1, 7, vel))
+            local dyn = util.round(util.linexp(1+25, 127-25, 1, 7, vel))
+            local vel_lvl = util.linexp(1, 127, 0.25, 1.6, vel)
+
+            print('vel', vel, dyn)
             
-            -- args: midival, dynamic, variation, release
-            engine.noteOn(msg.note-12, math.ceil((msg.vel/127)*7), 1, 0)
+            -- args: midival, dynamic, variation, release, velocity_level
+            engine.noteOn(msg.note-12, dyn, 1, 0, vel_lvl)
         elseif msg.type == "note_off" then
         end
     end
